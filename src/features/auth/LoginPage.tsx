@@ -4,7 +4,7 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { ApiError } from '@/api/client'
-import { useAuth } from '@/auth/AuthContext'
+import { useAuth } from '@/auth/useAuth'
 import { AuthLayout } from '@/components/AuthLayout'
 import { Alert, Button, PasswordField, TextField } from '@/components/ui'
 

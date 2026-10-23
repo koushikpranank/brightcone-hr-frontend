@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { changePassword } from '@/api/auth'
 import { ApiError } from '@/api/client'
-import { useAuth } from '@/auth/AuthContext'
+import { useAuth } from '@/auth/useAuth'
 import { Alert, Button, Card, PasswordField } from '@/components/ui'
 import { passwordRules } from '@/domain/password'
 

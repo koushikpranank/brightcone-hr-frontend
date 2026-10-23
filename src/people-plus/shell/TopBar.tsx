@@ -1,138 +1,99 @@
-import { useEffect, useState } from 'react'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useLocation } from 'react-router-dom'
-import { useAuth } from '@/auth/AuthContext'
-import { listNotifications, markNotificationRead } from '@/api/notifications'
-import { APPS, getAppForPath } from '../data'
+import React from 'react'
+import { usePeoplePlus } from '../people-plus-context'
+import { APPS } from '../data'
 import { Icon } from '../Icon'
-import { AppLauncher } from './AppLauncher'
-import { CommandPalette } from './CommandPalette'
+import { avatarColor, initials } from '../helpers'
 
-export function TopBar({
-  onMenu,
-  theme,
-  setTheme,
-}: {
-  onMenu: () => void
-  theme: string
-  setTheme: (mode: 'light' | 'dark') => void
-}) {
-  const { user, signOut } = useAuth()
-  const location = useLocation()
-  const app = getAppForPath(location.pathname)
-  const [launcher, setLauncher] = useState(false)
-  const [command, setCommand] = useState(false)
-  const [notice, setNotice] = useState(false)
-  const queryClient = useQueryClient()
-  const notifications = useQuery({
-    queryKey: ['notifications'],
-    queryFn: listNotifications,
-    refetchInterval: 60_000,
-  })
-  const markRead = async (id: string) => {
-    await markNotificationRead(id)
-    await queryClient.invalidateQueries({ queryKey: ['notifications'] })
+export const TopBar: React.FC<{ onMenu?: () => void }> = ({ onMenu }) => {
+  const { activeApp, theme, toggleTheme, user, viewAs, setViewAs, setPaletteOpen, toast } = usePeoplePlus()
+
+  const app = APPS.find((a) => a.key === activeApp) || APPS[0]
+  const currentRole = viewAs || user?.role || 'Employee'
+
+  const toggleRole = () => {
+    const next = currentRole === 'HR Admin' ? 'Employee' : 'HR Admin'
+    setViewAs(next)
+    toast(`Switched perspective to ${next}`)
   }
-  useEffect(() => {
-    const onShortcut = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
-        event.preventDefault()
-        setCommand(true)
-      }
-    }
-    window.addEventListener('keydown', onShortcut)
-    return () => window.removeEventListener('keydown', onShortcut)
-  }, [])
+
   return (
-    <>
-      <header className="pp-header">
+    <header className="top" style={{ '--ac': app.color } as React.CSSProperties}>
+      <button
+        type="button"
+        className="icon-btn menu-btn"
+        aria-label="Open mobile navigation"
+        onClick={onMenu}
+      >
+        <Icon name="menu" size={18} />
+      </button>
+
+      <div className="crumb">
+        <span>Brightcone</span>
+        <Icon name="chevron" size={12} />
+        <b>{app.name}</b>
+      </div>
+
+      <button type="button" className="cmd" onClick={() => setPaletteOpen(true)}>
+        <Icon name="search" size={16} />
+        <span>Search apps, people, or commands...</span>
+        <kbd>Ctrl K</kbd>
+      </button>
+
+      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        {/* Perspective / Role Switcher */}
         <button
           type="button"
-          className="pp-icon-button pp-mobile-menu"
-          aria-label="Open app navigation"
-          onClick={onMenu}
+          className="btn sm"
+          style={{
+            background: 'var(--surface-2)',
+            borderColor: 'var(--line)',
+            fontSize: '12.5px',
+            gap: '6px',
+          }}
+          onClick={toggleRole}
+          title="Toggle view between HR Admin and Employee"
         >
-          <Icon name="menu" />
+          <span className="muted">Viewing as:</span>
+          <b>{currentRole}</b>
+          <Icon name="swap" size={13} />
         </button>
+
+        {/* Theme Toggle Button */}
         <button
           type="button"
-          className="pp-launcher-button"
-          onClick={() => setLauncher(true)}
-          aria-label="Open app launcher"
+          id="themeBtn"
+          className="icon-btn"
+          aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          title="Toggle theme"
+          onClick={toggleTheme}
         >
-          <Icon name="grid" />
+          <Icon name={theme === 'dark' ? 'sun' : 'moon'} size={18} />
         </button>
-        <div className="pp-breadcrumb">
-          <span>Brightcone</span>
-          <Icon name="chevron" size={13} />
-          <strong>{app.name}</strong>
-        </div>
-        <button type="button" className="pp-command-trigger" onClick={() => setCommand(true)}>
-          <Icon name="search" />
-          <span>Search people, pages or actions</span>
-          <kbd>Ctrl K</kbd>
+
+        {/* Notifications Bell */}
+        <button
+          type="button"
+          id="bell"
+          className="icon-btn"
+          aria-label="Notifications"
+          title="Notifications"
+          onClick={() => toast('No unread notifications at this time.')}
+        >
+          <Icon name="bell" size={18} />
+          <span className="dot" />
         </button>
-        <div className="pp-header-actions">
-          <button
-            type="button"
-            className="pp-icon-button"
-            aria-label="Toggle theme"
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-          >
-            <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
-          </button>
-          <div className="pp-notice-wrap">
-            <button
-              type="button"
-              className="pp-icon-button"
-              aria-label={`Notifications${notifications.data?.unread_count ? `, ${notifications.data.unread_count} unread` : ''}`}
-              aria-expanded={notice}
-              onClick={() => setNotice((value) => !value)}
-            >
-              <Icon name="bell" />
-              {!!notifications.data?.unread_count && (
-                <span className="pp-notice-count">
-                  {notifications.data.unread_count > 99 ? '99+' : notifications.data.unread_count}
-                </span>
-              )}
-            </button>
-            {notice && (
-              <div className="pp-notice-popover">
-                <strong>Notifications</strong>
-                {notifications.isPending && <p>Loading notifications…</p>}
-                {notifications.isError && <p>Could not load notifications. Try again.</p>}
-                {notifications.data?.items.length === 0 && <p>You’re all caught up.</p>}
-                {notifications.data?.items.map((item) => (
-                  <button
-                    className={`pp-notice-item${item.read_at ? '' : ' is-unread'}`}
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      if (!item.read_at) void markRead(item.id).catch(() => undefined)
-                    }}
-                  >
-                    <span>{item.title}</span>
-                    <small>{item.body}</small>
-                  </button>
-                ))}
-              </div>
-            )}
+
+        {/* User Pill */}
+        <div className="me">
+          <div className="av" style={{ background: avatarColor(user?.name || 'User') }}>
+            {initials(user?.name || 'U')}
           </div>
-          <span className="pp-header-divider" />
-          <span className="pp-user">
-            <span className="pp-avatar">{user?.name.slice(0, 1).toUpperCase()}</span>
-            <span>
-              <strong>{user?.name}</strong>
-              <small>{user?.role.replace('_', ' ')}</small>
-            </span>
-          </span>
-          <button type="button" className="pp-signout" onClick={() => void signOut()}>
-            Sign out
-          </button>
+          <div>
+            <b>{user?.name || 'Guest'}</b>
+            <span>{currentRole}</span>
+          </div>
         </div>
-      </header>
-      {launcher && <AppLauncher apps={APPS} close={() => setLauncher(false)} />}
-      {command && <CommandPalette close={() => setCommand(false)} />}
-    </>
+      </div>
+    </header>
   )
 }

@@ -1,5 +1,5 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { useAuth } from '@/auth/AuthContext'
+import { useAuth } from '@/auth/useAuth'
 import { ModuleHeader } from '@/components/ModuleHeader'
 import { SectionCard } from '@/components/SectionCard'
 import { EmployeeForm } from './EmployeeForm'

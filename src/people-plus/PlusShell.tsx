@@ -1,41 +1,47 @@
-import { useState } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
-import { currentTheme, toggleTheme } from '@/theme'
-import { getAppForPath } from './data'
-import { SuiteSidebar } from './shell/SuiteSidebar'
+import React, { useState } from 'react'
+import { usePeoplePlus } from './people-plus-context'
 import { AppRail } from './shell/AppRail'
+import { SuiteSidebar } from './shell/SuiteSidebar'
 import { TopBar } from './shell/TopBar'
+import { ViewRouter } from './views/ViewRouter'
+import { SuiteModals } from './views/SuiteModals'
+import { SuiteOverlays } from './views/SuiteOverlays'
+import { APPS } from './data'
 
-export function PlusShell() {
-  const location = useLocation()
-  const app = getAppForPath(location.pathname)
+export const PlusShell: React.FC = () => {
+  const { activeApp } = usePeoplePlus()
   const [mobileOpen, setMobileOpen] = useState(false)
-  const [theme, setTheme] = useState(currentTheme())
-  const setMode = (mode: 'light' | 'dark') => {
-    if (currentTheme() !== mode) toggleTheme()
-    setTheme(mode)
-  }
+
+  const currentApp = APPS.find((a) => a.key === activeApp) || APPS[0]
+
   return (
-    <div className="pp-app" data-app={app.key}>
-      <AppRail active={app.key} mobileOpen={mobileOpen} onNavigate={() => setMobileOpen(false)} />
-      <div className="pp-shell">
-        <div className={`pp-sidebar-wrap${mobileOpen ? ' is-open' : ''}`}>
-          <SuiteSidebar appKey={app.key} close={() => setMobileOpen(false)} />
-        </div>
-        {mobileOpen && (
-          <button
-            className="pp-backdrop"
-            aria-label="Close navigation"
-            onClick={() => setMobileOpen(false)}
-          />
-        )}
-        <div className="pp-main">
-          <TopBar onMenu={() => setMobileOpen(true)} theme={theme} setTheme={setMode} />
-          <main className="pp-content">
-            <Outlet />
-          </main>
-        </div>
+    <div className="app" data-app={activeApp} style={{ '--ac': currentApp.color } as React.CSSProperties}>
+      {/* 78px Suite Rail */}
+      <AppRail mobileOpen={mobileOpen} onNavigate={() => setMobileOpen(false)} />
+
+      {/* 236px App Sidebar */}
+      <SuiteSidebar mobileOpen={mobileOpen} close={() => setMobileOpen(false)} />
+
+      {/* Mobile backdrop scrim */}
+      {mobileOpen && (
+        <div
+          className="scrim on"
+          style={{ zIndex: 44 }}
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Main Content Area */}
+      <div className="main">
+        <TopBar onMenu={() => setMobileOpen(true)} />
+        <main className="content">
+          <ViewRouter />
+        </main>
       </div>
+
+      {/* Modals, Drawers & Overlays */}
+      <SuiteModals />
+      <SuiteOverlays />
     </div>
   )
 }

@@ -1,5 +1,14 @@
 export type AppKey =
-  'people' | 'recruit' | 'payroll' | 'expense' | 'sign' | 'connect' | 'learn' | 'shift' | 'plus'
+  | 'people'
+  | 'recruit'
+  | 'payroll'
+  | 'expense'
+  | 'sign'
+  | 'connect'
+  | 'learn'
+  | 'shift'
+  | 'plus'
+
 export type AppDefinition = {
   key: AppKey
   name: string
@@ -8,13 +17,14 @@ export type AppDefinition = {
   description: string
   path: string
 }
+
 export type SideLink = {
+  key: string
   label: string
   to: string
   icon: string
   group: string
   permission?: string
-  comingSoon?: boolean
 }
 
 export const APPS: AppDefinition[] = [
@@ -24,7 +34,7 @@ export const APPS: AppDefinition[] = [
     icon: 'users',
     color: '#12A58E',
     description: 'Employee records, time off and HR operations',
-    path: '/people-dashboard',
+    path: '/people',
   },
   {
     key: 'recruit',
@@ -32,7 +42,7 @@ export const APPS: AppDefinition[] = [
     icon: 'briefcase',
     color: '#7C5CFF',
     description: 'Jobs, candidates, interviews and offers',
-    path: '/recruitment',
+    path: '/recruit',
   },
   {
     key: 'payroll',
@@ -48,7 +58,7 @@ export const APPS: AppDefinition[] = [
     icon: 'receipt',
     color: '#E07A1D',
     description: 'Claims, approvals and reimbursements',
-    path: '/expenses',
+    path: '/expense',
   },
   {
     key: 'sign',
@@ -64,7 +74,7 @@ export const APPS: AppDefinition[] = [
     icon: 'chat',
     color: '#0BA6CC',
     description: 'Company feed, kudos and announcements',
-    path: '/feed',
+    path: '/connect',
   },
   {
     key: 'learn',
@@ -80,120 +90,266 @@ export const APPS: AppDefinition[] = [
     icon: 'calendar',
     color: '#3B82C4',
     description: 'Rosters, shift swaps and attendance',
-    path: '/roster',
+    path: '/shift',
   },
   {
     key: 'plus',
     name: 'People Plus',
-    icon: 'dashboard',
+    icon: 'grid',
     color: '#0B6FDB',
     description: 'Your whole HR suite on one dashboard',
     path: '/',
   },
 ]
 
-const soon = (label: string, icon: string, group: string): SideLink => ({
-  label,
-  icon,
-  group,
-  to: `/coming-soon/${encodeURIComponent(label.toLowerCase().replace(/[^a-z0-9]+/g, '-'))}`,
-  comingSoon: true,
-})
-const link = (
-  label: string,
-  to: string,
-  icon: string,
-  group: string,
-  permission?: string,
-): SideLink => ({ label, to, icon, group, permission })
-
-export const NAV_BY_ROLE: Record<'admin' | 'employee', Record<AppKey, SideLink[]>> = {
+export const NAV_STRUCTURE = {
   admin: {
     plus: [
-      link('Suite dashboard', '/', 'dashboard', 'Overview'),
-      link('Approvals inbox', '/approvals', 'inbox', 'Overview'),
-      link('Reports & analytics', '/reports', 'chart', 'Overview'),
-      link('Settings & access', '/settings', 'gear', 'Administration'),
-      link('Audit log', '/audit', 'shield', 'Administration', 'audit:read'),
+      {
+        group: 'Overview',
+        items: [
+          { key: 'suiteDash', label: 'Suite dashboard', to: '/', icon: 'dashboard' },
+          { key: 'approvals', label: 'Approvals inbox', to: '/approvals', icon: 'inbox' },
+          { key: 'reports', label: 'Reports & analytics', to: '/reports', icon: 'chart' },
+        ],
+      },
+      {
+        group: 'Advanced HR',
+        items: [
+          { key: 'm_perf', label: 'Performance management', to: '/advanced/performance', icon: 'chart' },
+          { key: 'm_career', label: 'Career growth & promotions', to: '/advanced/career', icon: 'star' },
+          { key: 'm_wfa', label: 'Workforce analytics', to: '/advanced/workforce', icon: 'chart' },
+          { key: 'm_eng', label: 'Engagement analytics', to: '/advanced/engagement', icon: 'heart' },
+          { key: 'm_comp', label: 'HR compliance dashboard', to: '/advanced/compliance', icon: 'shield' },
+          { key: 'm_actions', label: 'Actions & reminders', to: '/advanced/actions', icon: 'bell' },
+          { key: 'm_access', label: 'Access control', to: '/advanced/access', icon: 'gear' },
+        ],
+      },
+      {
+        group: 'Administration',
+        items: [
+          { key: 'settings', label: 'Settings & access', to: '/settings', icon: 'gear' },
+          { key: 'audit', label: 'Audit log', to: '/audit', icon: 'shield' },
+          { key: 'm_backup', label: 'Data & backup', to: '/data-backup', icon: 'download' },
+        ],
+      },
     ],
     people: [
-      link('People dashboard', '/people-dashboard', 'dashboard', 'Overview'),
-      link('Portal accounts', '/employees', 'users', 'Workforce', 'users:manage'),
-      soon('Org structure', 'org', 'Workforce'),
-      soon('Onboarding', 'login', 'Workforce'),
-      soon('Exits & offboarding', 'logout', 'Workforce'),
-      soon('Leave management', 'leave', 'Time off'),
-      soon('Performance', 'chart', 'Operations'),
-      soon('Assets', 'laptop', 'Operations'),
-      soon('Documents & letters', 'doc', 'Operations'),
-      soon('Helpdesk queue', 'chat', 'Operations'),
+      {
+        group: 'Overview',
+        items: [{ key: 'adminDash', label: 'People dashboard', to: '/people', icon: 'dashboard' }],
+      },
+      {
+        group: 'Workforce',
+        items: [
+          { key: 'employees', label: 'Employees', to: '/employees', icon: 'users' },
+          { key: 'orgStructure', label: 'Org structure', to: '/org-structure', icon: 'org' },
+          { key: 'onboarding', label: 'Onboarding', to: '/onboarding', icon: 'login' },
+          { key: 'exits', label: 'Exits & offboarding', to: '/exits', icon: 'logout' },
+        ],
+      },
+      {
+        group: 'Time off',
+        items: [{ key: 'leaveAdmin', label: 'Leave management', to: '/leave-admin', icon: 'leave' }],
+      },
+      {
+        group: 'Operations',
+        items: [
+          { key: 'performanceAdmin', label: 'Performance', to: '/performance-admin', icon: 'chart' },
+          { key: 'assetsAdmin', label: 'Assets', to: '/assets-admin', icon: 'laptop' },
+          { key: 'docsAdmin', label: 'Documents & letters', to: '/docs-admin', icon: 'doc' },
+          { key: 'helpAdmin', label: 'Helpdesk queue', to: '/help-admin', icon: 'chat' },
+        ],
+      },
     ],
     recruit: [
-      soon('Recruit dashboard', 'dashboard', 'Overview'),
-      soon('Pipeline & jobs', 'briefcase', 'Hiring'),
+      {
+        group: 'Overview',
+        items: [{ key: 'recruitDash', label: 'Recruit dashboard', to: '/recruit', icon: 'dashboard' }],
+      },
+      {
+        group: 'Hiring',
+        items: [{ key: 'recruitment', label: 'Pipeline & jobs', to: '/recruitment', icon: 'briefcase' }],
+      },
     ],
     payroll: [
-      soon('Payroll dashboard', 'dashboard', 'Overview'),
-      soon('Payroll runs', 'pay', 'Payroll'),
-      soon('Benefits', 'heart', 'Payroll'),
+      {
+        group: 'Overview',
+        items: [{ key: 'payrollDash', label: 'Payroll dashboard', to: '/payroll', icon: 'dashboard' }],
+      },
+      {
+        group: 'Payroll',
+        items: [
+          { key: 'payrollAdmin', label: 'Payroll runs', to: '/payroll-admin', icon: 'pay' },
+          { key: 'benefitsAdmin', label: 'Benefits', to: '/benefits-admin', icon: 'heart' },
+        ],
+      },
     ],
     expense: [
-      soon('Expense dashboard', 'dashboard', 'Overview'),
-      soon('All claims', 'receipt', 'Claims'),
+      {
+        group: 'Overview',
+        items: [{ key: 'expenseDash', label: 'Expense dashboard', to: '/expense', icon: 'dashboard' }],
+      },
+      {
+        group: 'Claims',
+        items: [{ key: 'expensesAdmin', label: 'All claims', to: '/expenses-admin', icon: 'receipt' }],
+      },
     ],
     sign: [
-      soon('Sign dashboard', 'dashboard', 'Overview'),
-      soon('Signature requests', 'pen', 'Documents'),
-      soon('Templates', 'doc', 'Documents'),
+      {
+        group: 'Overview',
+        items: [{ key: 'signDash', label: 'Sign dashboard', to: '/sign', icon: 'dashboard' }],
+      },
+      {
+        group: 'Documents',
+        items: [
+          { key: 'signDocs', label: 'Signature requests', to: '/sign-docs', icon: 'pen' },
+          { key: 'signTemplates', label: 'Templates', to: '/sign-templates', icon: 'doc' },
+        ],
+      },
     ],
     connect: [
-      soon('Company feed', 'chat', 'Overview'),
-      soon('Announcements', 'mega', 'Communicate'),
-      soon('People directory', 'users', 'Communicate'),
+      {
+        group: 'Overview',
+        items: [{ key: 'feed', label: 'Company feed', to: '/connect', icon: 'chat' }],
+      },
+      {
+        group: 'Communicate',
+        items: [
+          { key: 'announcements', label: 'Announcements', to: '/announcements', icon: 'mega' },
+          { key: 'directory', label: 'People directory', to: '/directory', icon: 'users' },
+        ],
+      },
     ],
     learn: [
-      soon('Learn dashboard', 'dashboard', 'Overview'),
-      soon('Courses', 'learn', 'Catalogue'),
+      {
+        group: 'Overview',
+        items: [{ key: 'learnDash', label: 'Learn dashboard', to: '/learn', icon: 'dashboard' }],
+      },
+      {
+        group: 'Catalogue',
+        items: [{ key: 'learningAdmin', label: 'Courses', to: '/courses-admin', icon: 'learn' }],
+      },
     ],
     shift: [
-      soon('Weekly roster', 'calendar', 'Overview'),
-      soon('Swap requests', 'swap', 'Manage'),
-      soon('Attendance & shifts', 'clock', 'Manage'),
+      {
+        group: 'Overview',
+        items: [{ key: 'shiftRoster', label: 'Weekly roster', to: '/shift', icon: 'calendar' }],
+      },
+      {
+        group: 'Manage',
+        items: [
+          { key: 'shiftSwaps', label: 'Swap requests', to: '/shift-swaps', icon: 'swap' },
+          { key: 'attendanceAdmin', label: 'Attendance & shifts', to: '/attendance-admin', icon: 'clock' },
+        ],
+      },
     ],
   },
   employee: {
-    plus: [link('My dashboard', '/', 'home', 'Overview')],
+    plus: [
+      {
+        group: 'Overview',
+        items: [{ key: 'home', label: 'My dashboard', to: '/', icon: 'home' }],
+      },
+    ],
     people: [
-      soon('My profile', 'user', 'Me'),
-      soon('Leave', 'leave', 'Me'),
-      soon('Attendance', 'clock', 'Me'),
-      soon('Goals & reviews', 'chart', 'Grow'),
-      soon('Documents & letters', 'doc', 'Workplace'),
-      soon('My assets', 'laptop', 'Workplace'),
-      soon('HR helpdesk', 'chat', 'Workplace'),
-      soon('Resignation', 'logout', 'Workplace'),
+      {
+        group: 'Me',
+        items: [
+          { key: 'profile', label: 'My profile', to: '/profile', icon: 'user' },
+          { key: 'myLeave', label: 'Leave', to: '/leave', icon: 'leave' },
+          { key: 'myAttendance', label: 'Attendance', to: '/attendance', icon: 'clock' },
+        ],
+      },
+      {
+        group: 'Grow',
+        items: [{ key: 'myPerformance', label: 'Goals & reviews', to: '/performance', icon: 'chart' }],
+      },
+      {
+        group: 'Workplace',
+        items: [
+          { key: 'myDocs', label: 'Documents & letters', to: '/documents', icon: 'doc' },
+          { key: 'myAssets', label: 'My assets', to: '/assets', icon: 'laptop' },
+          { key: 'myHelp', label: 'HR helpdesk', to: '/helpdesk', icon: 'chat' },
+          { key: 'myExit', label: 'Resignation', to: '/resignation', icon: 'logout' },
+        ],
+      },
     ],
-    recruit: [soon('Jobs & referrals', 'briefcase', 'Careers')],
-    payroll: [soon('Payslips & tax', 'pay', 'Pay'), soon('Benefits', 'heart', 'Pay')],
-    expense: [soon('My expenses', 'receipt', 'Claims')],
-    sign: [soon('Documents to sign', 'pen', 'Documents')],
+    recruit: [
+      {
+        group: 'Careers',
+        items: [{ key: 'careers', label: 'Jobs & referrals', to: '/careers', icon: 'briefcase' }],
+      },
+    ],
+    payroll: [
+      {
+        group: 'Pay',
+        items: [
+          { key: 'myPay', label: 'Payslips & tax', to: '/payslips', icon: 'pay' },
+          { key: 'myBenefits', label: 'Benefits', to: '/benefits', icon: 'heart' },
+        ],
+      },
+    ],
+    expense: [
+      {
+        group: 'Claims',
+        items: [{ key: 'myExpenses', label: 'My expenses', to: '/expenses', icon: 'receipt' }],
+      },
+    ],
+    sign: [
+      {
+        group: 'Documents',
+        items: [{ key: 'mySign', label: 'Documents to sign', to: '/documents-to-sign', icon: 'pen' }],
+      },
+    ],
     connect: [
-      soon('Company feed', 'chat', 'Community'),
-      soon('People directory', 'users', 'Community'),
+      {
+        group: 'Community',
+        items: [
+          { key: 'feed', label: 'Company feed', to: '/connect', icon: 'chat' },
+          { key: 'directory', label: 'People directory', to: '/directory', icon: 'users' },
+        ],
+      },
     ],
-    learn: [soon('My learning', 'learn', 'Learning')],
-    shift: [soon('My schedule', 'calendar', 'Schedule')],
+    learn: [
+      {
+        group: 'Learning',
+        items: [{ key: 'myLearning', label: 'My learning', to: '/learning', icon: 'learn' }],
+      },
+    ],
+    shift: [
+      {
+        group: 'Schedule',
+        items: [{ key: 'mySchedule', label: 'My schedule', to: '/schedule', icon: 'calendar' }],
+      },
+    ],
   },
 }
 
 export function getAppForPath(path: string): AppDefinition {
-  for (const app of APPS) {
-    if (path === app.path) return app
-    if (path.startsWith(app.path + '/') && app.path !== '/') return app
+  if (path.startsWith('/people') || path === '/employees' || path === '/profile' || path === '/leave' || path === '/attendance' || path === '/org-structure' || path === '/onboarding' || path === '/exits' || path === '/leave-admin' || path === '/performance-admin' || path === '/assets-admin' || path === '/docs-admin' || path === '/help-admin') {
+    return APPS.find((a) => a.key === 'people')!
   }
-  if (path === '/people-dashboard' || path === '/employees')
-    return APPS.find((app) => app.key === 'people')!
-  if (path === '/approvals' || path === '/reports' || path === '/settings' || path === '/audit')
-    return APPS.find((app) => app.key === 'plus')!
-  return APPS.find((app) => app.key === 'plus')!
+  if (path.startsWith('/recruit') || path === '/recruitment' || path === '/careers') {
+    return APPS.find((a) => a.key === 'recruit')!
+  }
+  if (path.startsWith('/payroll') || path === '/payslips' || path === '/benefits' || path === '/payroll-admin' || path === '/benefits-admin') {
+    return APPS.find((a) => a.key === 'payroll')!
+  }
+  if (path.startsWith('/expense') || path === '/expenses' || path === '/expenses-admin') {
+    return APPS.find((a) => a.key === 'expense')!
+  }
+  if (path.startsWith('/sign') || path === '/sign-docs' || path === '/sign-templates' || path === '/documents-to-sign') {
+    return APPS.find((a) => a.key === 'sign')!
+  }
+  if (path.startsWith('/connect') || path === '/announcements' || path === '/directory') {
+    return APPS.find((a) => a.key === 'connect')!
+  }
+  if (path.startsWith('/learn') || path === '/learning' || path === '/courses-admin') {
+    return APPS.find((a) => a.key === 'learn')!
+  }
+  if (path.startsWith('/shift') || path === '/schedule' || path === '/shift-swaps' || path === '/attendance-admin') {
+    return APPS.find((a) => a.key === 'shift')!
+  }
+  return APPS.find((a) => a.key === 'plus')!
 }

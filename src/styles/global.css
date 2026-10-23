@@ -1,23 +1,11 @@
 @import './tokens.css';
-
-* {
-  box-sizing: border-box;
-}
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-}
-.card {
-  background: var(--surface);
-  border-radius: var(--radius);
-  padding: 24px;
-  max-width: 480px;
-  margin: 64px auto;
-}
-.ok {
-  color: var(--ok);
-}
-.bad {
-  color: var(--bad);
-}
+@import './suite.css';
+@import './topbar.css';
+@import './components.css';
+@import './tables.css';
+@import './overlays.css';
+@import './modules.css';
+@import './kanban-and-roster.css';
+@import './social-sign.css';
+@import './advanced-hr.css';
+@import './login.css';

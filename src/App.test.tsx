@@ -5,14 +5,14 @@ import App from './App'
 
 afterEach(() => vi.restoreAllMocks())
 
-it('shows the health result from the API', async () => {
-  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-    new Response(JSON.stringify({ status: 'ok', database: 'ok' }), { status: 200 }),
-  )
+it('renders the Brightcone People Plus suite dashboard', async () => {
   render(
     <QueryClientProvider client={new QueryClient()}>
       <App />
     </QueryClientProvider>,
   )
-  expect(await screen.findByTestId('health')).toHaveTextContent('Server: ok · Database: ok')
+
+  const elements = await screen.findAllByText(/Brightcone/i)
+  expect(elements.length).toBeGreaterThan(0)
+  expect(await screen.findByText(/Enterprise Suite/i)).toBeInTheDocument()
 })
