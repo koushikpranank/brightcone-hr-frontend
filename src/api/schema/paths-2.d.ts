@@ -33,14 +33,110 @@ export interface PathGroup2 {
     patch?: never
     trace?: never
   }
-  '/api/record-types': {
+  '/api/people/departments': {
     parameters: {
       query?: never
       header?: never
       path?: never
       cookie?: never
     }
-    get: operations['list']
+    get: operations['departments']
+    put?: never
+    post: operations['create_department']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/people/departments/{id}': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put: operations['department']
+    post?: never
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/people/departments/{id}/archive': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations['archive_department']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/people/departments/{id}/restore': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations['restore_department']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/people/employees': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations['list_employees']
+    put?: never
+    post: operations['create_employee']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/people/employees/import/dry-run': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get?: never
+    put?: never
+    post: operations['dry_run']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/people/employees/import/template.csv': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations['template']
     put?: never
     post?: never
     delete?: never
@@ -49,23 +145,7 @@ export interface PathGroup2 {
     patch?: never
     trace?: never
   }
-  '/api/records/export.csv': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations['csv']
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/api/records/{id}': {
+  '/api/people/employees/{id}': {
     parameters: {
       query?: never
       header?: never
@@ -81,7 +161,7 @@ export interface PathGroup2 {
     patch?: never
     trace?: never
   }
-  '/api/records/{id}/archive': {
+  '/api/people/employees/{id}/archive': {
     parameters: {
       query?: never
       header?: never
@@ -97,23 +177,7 @@ export interface PathGroup2 {
     patch?: never
     trace?: never
   }
-  '/api/records/{id}/history': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations['history']
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/api/records/{id}/restore': {
+  '/api/people/employees/{id}/restore': {
     parameters: {
       query?: never
       header?: never
@@ -129,31 +193,31 @@ export interface PathGroup2 {
     patch?: never
     trace?: never
   }
-  '/api/records/{record_type}': {
+  '/api/people/grades': {
     parameters: {
       query?: never
       header?: never
       path?: never
       cookie?: never
     }
-    get: operations['list']
+    get: operations['grades']
     put?: never
-    post: operations['create']
+    post: operations['create_grade']
     delete?: never
     options?: never
     head?: never
     patch?: never
     trace?: never
   }
-  '/api/rules': {
+  '/api/people/grades/{id}': {
     parameters: {
       query?: never
       header?: never
       path?: never
       cookie?: never
     }
-    get: operations['list']
-    put?: never
+    get?: never
+    put: operations['grade']
     post?: never
     delete?: never
     options?: never
@@ -161,7 +225,7 @@ export interface PathGroup2 {
     patch?: never
     trace?: never
   }
-  '/api/rules/events/{id}/retry': {
+  '/api/people/grades/{id}/archive': {
     parameters: {
       query?: never
       header?: never
@@ -170,30 +234,14 @@ export interface PathGroup2 {
     }
     get?: never
     put?: never
-    post: operations['retry']
+    post: operations['archive_grade']
     delete?: never
     options?: never
     head?: never
     patch?: never
     trace?: never
   }
-  '/api/rules/metrics': {
-    parameters: {
-      query?: never
-      header?: never
-      path?: never
-      cookie?: never
-    }
-    get: operations['metrics']
-    put?: never
-    post?: never
-    delete?: never
-    options?: never
-    head?: never
-    patch?: never
-    trace?: never
-  }
-  '/api/rules/{rule_key}': {
+  '/api/people/grades/{id}/restore': {
     parameters: {
       query?: never
       header?: never
@@ -201,8 +249,24 @@ export interface PathGroup2 {
       cookie?: never
     }
     get?: never
-    put: operations['update']
-    post?: never
+    put?: never
+    post: operations['restore_grade']
+    delete?: never
+    options?: never
+    head?: never
+    patch?: never
+    trace?: never
+  }
+  '/api/people/locations': {
+    parameters: {
+      query?: never
+      header?: never
+      path?: never
+      cookie?: never
+    }
+    get: operations['locations']
+    put?: never
+    post: operations['create_location']
     delete?: never
     options?: never
     head?: never

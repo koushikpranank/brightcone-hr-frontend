@@ -327,3 +327,20 @@
 .pp-command footer {
   @apply [padding:9px_13px] [border-top:1px_solid_var(--pp-line)] [color:var(--pp-faint)] [font-size:9px];
 }
+
+/* Row of headline stat tiles, shared by accounts and the Advanced-HR analytics pages. */
+.pp-stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+}
+
+/* Inline text link used on the Settings hub and other admin pages. */
+.pp-link {
+  color: var(--brand);
+  text-decoration: none;
+  font-weight: 500;
+}
+.pp-link:hover {
+  text-decoration: underline;
+}

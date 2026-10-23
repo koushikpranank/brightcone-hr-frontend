@@ -6,10 +6,13 @@
 import type { OperationGroup1 } from './schema/operations-1'
 import type { OperationGroup2 } from './schema/operations-2'
 import type { OperationGroup3 } from './schema/operations-3'
+import type { OperationGroup4 } from './schema/operations-4'
+import type { OperationGroup5 } from './schema/operations-5'
 import type { PathGroup1 } from './schema/paths-1'
 import type { PathGroup2 } from './schema/paths-2'
+import type { PathGroup3 } from './schema/paths-3'
 
-export interface paths extends PathGroup1, PathGroup2 {}
+export interface paths extends PathGroup1, PathGroup2, PathGroup3 {}
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
@@ -88,6 +91,68 @@ export interface components {
             /** @example employee */
             role: string;
         };
+        CsvDryRun: {
+            issues: components["schemas"]["CsvIssue"][];
+            rows: number;
+            valid: boolean;
+        };
+        CsvIssue: {
+            message: string;
+            row: number;
+        };
+        CsvPayload: {
+            csv: string;
+        };
+        DepartmentInput: {
+            code: string;
+            name: string;
+            /** Format: uuid */
+            parent_id?: string | null;
+        };
+        Employee: {
+            /** Format: uuid */
+            department_id?: string | null;
+            employee_number: string;
+            employment_type: string;
+            end_date?: string | null;
+            first_name: string;
+            /** Format: uuid */
+            grade_id?: string | null;
+            /** Format: uuid */
+            id: string;
+            last_name: string;
+            /** Format: uuid */
+            location_id?: string | null;
+            /** Format: uuid */
+            manager_id?: string | null;
+            phone?: string | null;
+            start_date: string;
+            status: string;
+            work_email: string;
+        };
+        EmployeeInput: {
+            /** Format: uuid */
+            department_id?: string | null;
+            employee_number: string;
+            employment_type: string;
+            end_date?: string | null;
+            first_name: string;
+            /** Format: uuid */
+            grade_id?: string | null;
+            last_name: string;
+            /** Format: uuid */
+            location_id?: string | null;
+            /** Format: uuid */
+            manager_id?: string | null;
+            phone?: string | null;
+            start_date: string;
+            status: string;
+            work_email: string;
+        };
+        EmployeeMutationInput: {
+            input: components["schemas"]["EmployeeInput"];
+            reason_code: string;
+        };
         FieldSchema: {
             allowed_values: string[];
             computed?: string | null;
@@ -99,6 +164,12 @@ export interface components {
         };
         ForgotParams: {
             email: string;
+        };
+        GradeInput: {
+            code: string;
+            label: string;
+            /** Format: int32 */
+            rank: number;
         };
         /** @description Result of the health check. `database` is `"ok"` or `"down"`. */
         HealthResponse: {
@@ -118,6 +189,12 @@ export interface components {
             id: number;
             /** Format: uuid */
             record_id: string;
+        };
+        LocationInput: {
+            code: string;
+            country_code: string;
+            label: string;
+            region?: string | null;
         };
         LoginParams: {
             /** @example ananya.rao@brightcone.ai */
@@ -183,6 +260,14 @@ export interface components {
         RecordUpdateInput: {
             data: unknown;
         };
+        ReferenceRow: {
+            code: string;
+            /** Format: uuid */
+            id: string;
+            label: string;
+            /** Format: uuid */
+            parent_id?: string | null;
+        };
         ResetParams: {
             password: string;
             token: string;
@@ -234,4 +319,4 @@ export interface components {
     pathItems: never;
 }
 export type $defs = Record<string, never>;
-export interface operations extends OperationGroup1, OperationGroup2, OperationGroup3 {}
+export interface operations extends OperationGroup1, OperationGroup2, OperationGroup3, OperationGroup4, OperationGroup5 {}

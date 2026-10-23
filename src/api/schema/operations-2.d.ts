@@ -232,7 +232,7 @@ export interface OperationGroup2 {
       }
     }
   }
-  list: {
+  departments: {
     parameters: {
       query?: never
       header?: never
@@ -246,26 +246,31 @@ export interface OperationGroup2 {
           [name: string]: unknown
         }
         content: {
-          'application/json': components['schemas']['RecordCatalog']
+          'application/json': components['schemas']['ReferenceRow'][]
         }
       }
     }
   }
-  csv: {
+  create_department: {
     parameters: {
       query?: never
       header?: never
       path?: never
       cookie?: never
     }
-    requestBody?: never
+    requestBody: {
+      content: {
+        'application/json': components['schemas']['DepartmentInput']
+      }
+    }
     responses: {
-      /** @description CSV export */
-      200: {
+      201: {
         headers: {
           [name: string]: unknown
         }
-        content?: never
+        content: {
+          'application/json': components['schemas']['ReferenceRow']
+        }
       }
     }
   }

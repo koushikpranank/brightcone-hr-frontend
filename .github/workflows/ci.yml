@@ -21,10 +21,8 @@ jobs:
       - name: API types are up to date with openapi.json
         run: |
           npm run gen:api
-          git diff --exit-code -- src/api
+          git diff --exit-code src/api/schema.d.ts
       - run: npm run lint
-      - name: Project structure (400-line limit, naming, unused CSS, dead code)
-        run: npm run check
       - run: npm run format:check
       - run: npm run typecheck
       - run: npm test

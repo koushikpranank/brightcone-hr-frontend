@@ -1,18 +1,23 @@
-import { Suspense } from 'react'
-import { useLocation, useRoutes } from 'react-router-dom'
-import { ErrorBoundary } from '@/components/ErrorBoundary'
-import { Spinner, ToastProvider } from '@/components/ui'
-import { routes } from '@/routes/route-table'
+import { useQuery } from '@tanstack/react-query'
+import { getHealth } from '@/api/health'
 
-/** The app below the providers. All URLs live in `routes/route-table.tsx`. */
 export default function App() {
-  const element = useRoutes(routes)
-  const { pathname } = useLocation()
+  const { data, error, isPending } = useQuery({ queryKey: ['health'], queryFn: getHealth })
+
   return (
-    <ToastProvider>
-      <ErrorBoundary scope="app" resetKey={pathname}>
-        <Suspense fallback={<Spinner />}>{element}</Suspense>
-      </ErrorBoundary>
-    </ToastProvider>
+    <main className="card">
+      <h1>Brightcone People</h1>
+      {isPending && <p>Checking the server…</p>}
+      {error && (
+        <p className="bad" role="alert">
+          Server unreachable: {error.message}
+        </p>
+      )}
+      {data && (
+        <p className="ok" data-testid="health">
+          Server: {data.status} · Database: {data.database}
+        </p>
+      )}
+    </main>
   )
 }
