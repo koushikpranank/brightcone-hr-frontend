@@ -1,24 +1,23 @@
 import React, { useState } from 'react'
-import { usePeoplePlus } from '../people-plus-context'
+import { useEmployees, useReferences } from '@/features/people/api'
+import { useAuth } from '@/auth/useAuth'
 import { Icon } from '../Icon'
-import { inr, salary, avatarColor, initials } from '../helpers'
+import { avatarColor, initials } from '../helpers'
 
 export const PayViews: React.FC = () => {
-  const { state, user, advancePayroll, toast } = usePeoplePlus()
-  const [tab, setTab] = useState<'run' | 'payslips' | 'register' | 'benefits'>('run')
+  const { can } = useAuth()
+  const allowed = can('people:manage') || can('users:manage')
+  const employees = useEmployees(allowed)
+  const departments = useReferences('departments', allowed)
 
-  const currentEmp = state.employees.find((e) => e.name === (user?.name || 'Rahul Varma')) || state.employees[0]
-  const sal = salary(currentEmp)
+  const [tab, setTab] = useState<'overview' | 'register'>('overview')
 
-  const steps = [
-    'Lock attendance & leaves',
-    'Review salary revisions',
-    'Process expense payouts',
-    'Calculate TDS & statutory',
-    'Publish payslips & bank files',
-  ]
+  const empList = employees.data ?? []
+  const deptList = departments.data ?? []
 
-  const currentStep = state.payroll.step
+  if (employees.isLoading) {
+    return <div className="loader">Loading payroll data…</div>
+  }
 
   return (
     <div className="view">
@@ -26,178 +25,106 @@ export const PayViews: React.FC = () => {
         <div>
           <div className="eyebrow">Payroll & Tax</div>
           <h1>Payroll Management</h1>
-          <p>End-to-end payroll processing, statutory deductions, monthly salary registers, and digital payslips.</p>
-        </div>
-        <div className="actions">
-          <button className="btn" onClick={() => toast('Bank NEFT/RTGS payment file generated!')}>
-            <Icon name="download" size={16} /> Download bank payout file
-          </button>
-          <button className="btn primary" onClick={advancePayroll}>
-            <Icon name="pay" size={16} /> {currentStep >= 5 ? 'Start next payroll cycle' : 'Advance payroll step'}
-          </button>
+          <p>Payroll processing, statutory deductions, and salary registers.</p>
         </div>
       </div>
 
       <div className="tabs mb">
-        <button className={tab === 'run' ? 'on' : ''} onClick={() => setTab('run')}>
-          Run payroll ({state.payroll.month})
-        </button>
-        <button className={tab === 'payslips' ? 'on' : ''} onClick={() => setTab('payslips')}>
-          My payslip & tax
+        <button className={tab === 'overview' ? 'on' : ''} onClick={() => setTab('overview')}>
+          Overview
         </button>
         <button className={tab === 'register' ? 'on' : ''} onClick={() => setTab('register')}>
-          Salary register
-        </button>
-        <button className={tab === 'benefits' ? 'on' : ''} onClick={() => setTab('benefits')}>
-          Benefits & Insurance ({state.plans.length})
+          Employee Register ({empList.length})
         </button>
       </div>
 
-      {tab === 'run' && (
+      {tab === 'overview' && (
         <>
-          <div className="card mt">
-            <h3>{state.payroll.month} Processing Stepper</h3>
-            <p className="muted" style={{ marginBottom: '20px' }}>
-              Complete all five validation steps to publish payslips and disburse salaries.
-            </p>
-            <div className="stepper">
-              {steps.map((st, i) => (
-                <div key={i} className={`step ${i < currentStep ? 'done' : i === currentStep ? 'cur' : ''}`}>
-                  <div className="n">{i < currentStep ? '✓' : i + 1}</div>
-                  <div>
-                    <b style={{ fontSize: '13.5px' }}>{st}</b>
-                    <span className="muted" style={{ fontSize: '12px', display: 'block' }}>
-                      {i < currentStep ? 'Completed' : i === currentStep ? 'In progress' : 'Upcoming'}
-                    </span>
-                  </div>
-                </div>
-              ))}
+          <div className="grid g3 mt">
+            <div className="card stat">
+              <div className="k"><i><Icon name="users" size={16} /></i> Active Employees</div>
+              <div className="v">{empList.filter((e) => e.status === 'active').length}</div>
+              <div className="d">Eligible for payroll</div>
             </div>
-
-            <div style={{ marginTop: '24px', display: 'flex', gap: '10px' }}>
-              <button className="btn primary" onClick={advancePayroll}>
-                {currentStep >= 4 ? 'Publish all payslips' : 'Approve & continue to next step'}
-              </button>
+            <div className="card stat">
+              <div className="k"><i><Icon name="org" size={16} /></i> Departments</div>
+              <div className="v">{deptList.length}</div>
+              <div className="d">With active employees</div>
+            </div>
+            <div className="card stat">
+              <div className="k"><i><Icon name="pay" size={16} /></i> Payroll API</div>
+              <div className="v">Pending</div>
+              <div className="d">Payroll endpoints not yet built</div>
             </div>
           </div>
 
-          <div className="grid g3 mt">
-            <div className="card stat">
-              <div className="k"><i><Icon name="pay" size={16} /></i> Estimated Gross</div>
-              <div className="v">{inr(state.employees.reduce((a, e) => a + e.ctc / 12, 0))}</div>
-              <div className="d">For {state.employees.length} active employees</div>
-            </div>
-            <div className="card stat">
-              <div className="k"><i><Icon name="receipt" size={16} /></i> Variable Payouts</div>
-              <div className="v">{inr(state.payroll.inputs.reduce((a, x) => a + x.amt, 0))}</div>
-              <div className="d">{state.payroll.inputs.length} bonus / claims pending</div>
-            </div>
-            <div className="card stat">
-              <div className="k"><i><Icon name="shield" size={16} /></i> Statutory EPF / ESI</div>
-              <div className="v">{inr(state.employees.reduce((a, e) => a + salary(e).pfE, 0))}</div>
-              <div className="d up">100% compliant</div>
+          <div className="card mt">
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <Icon name="pay" size={32} />
+              <h3 style={{ marginTop: 12 }}>Payroll processing coming soon</h3>
+              <p className="muted" style={{ marginTop: 8 }}>
+                The payroll run stepper, salary calculations, and TDS processing
+                require dedicated backend APIs. Employee data is ready from the People API.
+              </p>
             </div>
           </div>
         </>
       )}
 
-      {tab === 'payslips' && (
-        <div className="grid g2 mt">
-          <div className="card">
-            <h3>Earnings & Allowances</h3>
-            <div className="list">
-              {sal.earn.map(([name, amt]) => (
-                <div key={name} className="row">
-                  <div className="grow"><b>{name}</b></div>
-                  <div>{inr(amt)}</div>
-                </div>
-              ))}
-              <div className="row" style={{ fontWeight: 700, borderTop: '2px solid var(--line)' }}>
-                <div className="grow">Total Gross Salary</div>
-                <div style={{ color: 'var(--brand)' }}>{inr(sal.gross)}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <h3>Deductions & Statutory Contributions</h3>
-            <div className="list">
-              {sal.ded.map(([name, amt]) => (
-                <div key={name} className="row">
-                  <div className="grow"><b>{name}</b></div>
-                  <div style={{ color: 'var(--bad)' }}>- {inr(amt)}</div>
-                </div>
-              ))}
-              <div className="row" style={{ fontWeight: 700, borderTop: '2px solid var(--line)' }}>
-                <div className="grow">Net Monthly Take-Home</div>
-                <div style={{ color: 'var(--ok)', fontSize: '18px' }}>{inr(sal.net)}</div>
-              </div>
-            </div>
-            <button className="btn primary sm" style={{ marginTop: '16px' }} onClick={() => toast('PDF payslip generated and downloaded!')}>
-              <Icon name="download" size={14} /> Download PDF payslip
-            </button>
-          </div>
-        </div>
-      )}
-
       {tab === 'register' && (
         <div className="card mt">
-          <h3>Employee Salary Register</h3>
+          <h3>Employee Register</h3>
+          <p className="muted" style={{ marginBottom: 14 }}>
+            Employee records from the People API. Salary details require the payroll API.
+          </p>
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
                   <th>Employee</th>
+                  <th>Number</th>
                   <th>Department</th>
-                  <th>Annual CTC</th>
-                  <th>Monthly Gross</th>
-                  <th>Provident Fund</th>
-                  <th>Net Pay</th>
+                  <th>Type</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
-                {state.employees.map((e) => {
-                  const s = salary(e)
+                {empList.map((emp) => {
+                  const name = `${emp.first_name} ${emp.last_name}`
+                  const dept = deptList.find((d) => d.id === emp.department_id)
                   return (
-                    <tr key={e.id}>
+                    <tr key={emp.id}>
                       <td>
                         <div className="who">
-                          <div className="av" style={{ background: avatarColor(e.name) }}>{initials(e.name)}</div>
-                          <div><b>{e.name}</b><span>{e.id}</span></div>
+                          <div className="av" style={{ background: avatarColor(name) }}>
+                            {initials(name)}
+                          </div>
+                          <b>{name}</b>
                         </div>
                       </td>
-                      <td>{e.dept}</td>
-                      <td><b>{inr(e.ctc)}</b></td>
-                      <td>{inr(s.gross)}</td>
-                      <td>{inr(s.pfE)}</td>
-                      <td><span style={{ fontWeight: 600, color: 'var(--ok)' }}>{inr(s.net)}</span></td>
+                      <td className="muted">{emp.employee_number}</td>
+                      <td>{dept?.label ?? 'Unassigned'}</td>
+                      <td style={{ textTransform: 'capitalize' }}>
+                        {emp.employment_type.replace('_', ' ')}
+                      </td>
+                      <td>
+                        <span className={`pill ${emp.status === 'active' ? 'p-ok' : 'p-warn'}`}>
+                          {emp.status}
+                        </span>
+                      </td>
                     </tr>
                   )
                 })}
+                {empList.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="muted" style={{ textAlign: 'center', padding: 24 }}>
+                      No employees yet.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
-        </div>
-      )}
-
-      {tab === 'benefits' && (
-        <div className="grid g2 mt">
-          {state.plans.map((p) => (
-            <div key={p.n} className="card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <h3>{p.n}</h3>
-                <span className="pill p-ok">Enrolled</span>
-              </div>
-              <div className="kv" style={{ marginTop: '10px' }}>
-                <dt>Provider</dt>
-                <dd><b>{p.prov}</b></dd>
-                <dt>Coverage</dt>
-                <dd>{p.cover}</dd>
-                <dt>Premium</dt>
-                <dd><span className="pill p-info">{p.cost}</span></dd>
-              </div>
-            </div>
-          ))}
         </div>
       )}
     </div>

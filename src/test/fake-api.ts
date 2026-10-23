@@ -3,8 +3,8 @@ import type { Me, Session } from '@/api/client'
 
 export const employee: Me = {
   pid: '11111111-1111-1111-1111-111111111111',
-  email: 'rahul.varma@brightcone.ai',
-  name: 'Rahul Varma',
+  email: 'employee@example.test',
+  name: 'Test Employee',
   role: 'employee',
   must_change_password: false,
   permissions: ['profile:read:own', 'approvals:submit:own'],
@@ -38,3 +38,4 @@ export function mockApi(routes: Record<string, Handler>) {
   })
   return { calls, spy, count: (key: string) => calls.filter((c) => c.key === key).length }
 }
+

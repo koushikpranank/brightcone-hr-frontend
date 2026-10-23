@@ -126,6 +126,17 @@ export const NAV_STRUCTURE = {
         ],
       },
       {
+        group: 'Documents',
+        items: [
+          { key: 'letterGen', label: 'Letter generator', to: '/letter-gen', icon: 'doc' },
+          { key: 'letterTemplates', label: 'Letter templates', to: '/letter-templates', icon: 'doc' },
+          { key: 'policies', label: 'Company policies', to: '/policies', icon: 'shield' },
+          { key: 'docWorkflows', label: 'Doc workflows', to: '/doc-workflows', icon: 'pen' },
+          { key: 'docCompliance', label: 'Doc compliance', to: '/doc-compliance', icon: 'chart' },
+          { key: 'docAcknowledge', label: 'Acknowledgements', to: '/doc-acknowledge', icon: 'check' },
+        ],
+      },
+      {
         group: 'Administration',
         items: [
           { key: 'settings', label: 'Settings & access', to: '/settings', icon: 'gear' },
@@ -156,9 +167,15 @@ export const NAV_STRUCTURE = {
         group: 'Operations',
         items: [
           { key: 'performanceAdmin', label: 'Performance', to: '/performance-admin', icon: 'chart' },
+          { key: 'probation', label: 'Probation tracker', to: '/probation', icon: 'clock' },
+          { key: 'dependents', label: 'Dependents', to: '/dependents', icon: 'users' },
+          { key: 'recognition', label: 'Recognition', to: '/recognition', icon: 'star' },
+          { key: 'accessCards', label: 'Access cards', to: '/access-cards', icon: 'key' },
           { key: 'assetsAdmin', label: 'Assets', to: '/assets-admin', icon: 'laptop' },
           { key: 'docsAdmin', label: 'Documents & letters', to: '/docs-admin', icon: 'doc' },
           { key: 'helpAdmin', label: 'Helpdesk queue', to: '/help-admin', icon: 'chat' },
+          { key: 'facilities', label: 'Facilities', to: '/facilities', icon: 'building' },
+          { key: 'vendors', label: 'Vendors', to: '/vendors', icon: 'building' },
         ],
       },
     ],

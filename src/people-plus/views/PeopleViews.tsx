@@ -1,21 +1,38 @@
 import React, { useState } from 'react'
+import { useEmployees, useReferences, type Employee, type ReferenceItem } from '@/features/people/api'
+import { useAuth } from '@/auth/useAuth'
 import { usePeoplePlus } from '../people-plus-context'
 import { Icon } from '../Icon'
 import { avatarColor, initials } from '../helpers'
 
 export const PeopleViews: React.FC = () => {
-  const { state, openModal, openDrawer } = usePeoplePlus()
-  const [tab, setTab] = useState<'directory' | 'org' | 'onboard' | 'exits'>('directory')
+  const { openDrawer, openModal } = usePeoplePlus()
+  const { can } = useAuth()
+  const allowed = can('people:manage') || can('users:manage')
+
+  const employees = useEmployees(allowed)
+  const departments = useReferences('departments', allowed)
+
+  const [tab, setTab] = useState<'directory' | 'org'>('directory')
   const [search, setSearch] = useState('')
   const [deptFilter, setDeptFilter] = useState('All')
 
-  const departments = ['All', ...state.depts.map((d) => d.n)]
+  const empList: Employee[] = employees.data ?? []
+  const deptList: ReferenceItem[] = departments.data ?? []
 
-  const filteredEmployees = state.employees.filter((e) => {
-    const matchesSearch = !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.role.toLowerCase().includes(search.toLowerCase()) || e.id.toLowerCase().includes(search.toLowerCase())
-    const matchesDept = deptFilter === 'All' || e.dept === deptFilter
+  const filteredEmployees = empList.filter((e) => {
+    const term = search.toLowerCase()
+    const matchesSearch = !term
+      || `${e.first_name} ${e.last_name}`.toLowerCase().includes(term)
+      || e.employee_number.toLowerCase().includes(term)
+      || e.work_email.toLowerCase().includes(term)
+    const matchesDept = deptFilter === 'All' || e.department_id === deptFilter
     return matchesSearch && matchesDept
   })
+
+  if (employees.isLoading) {
+    return <div className="loader">Loading employee records…</div>
+  }
 
   return (
     <div className="view">
@@ -23,7 +40,7 @@ export const PeopleViews: React.FC = () => {
         <div>
           <div className="eyebrow">People App</div>
           <h1>People & Organization</h1>
-          <p>Manage employee records, organizational hierarchy, onboarding checklists, and offboarding.</p>
+          <p>Employee records and organizational hierarchy from the live API.</p>
         </div>
         <div className="actions">
           <button className="btn primary" onClick={() => openModal('addEmp')}>
@@ -34,16 +51,10 @@ export const PeopleViews: React.FC = () => {
 
       <div className="tabs mb">
         <button className={tab === 'directory' ? 'on' : ''} onClick={() => setTab('directory')}>
-          Directory ({state.employees.length})
+          Directory ({empList.length})
         </button>
         <button className={tab === 'org' ? 'on' : ''} onClick={() => setTab('org')}>
           Org structure
-        </button>
-        <button className={tab === 'onboard' ? 'on' : ''} onClick={() => setTab('onboard')}>
-          Onboarding ({state.onboard.length})
-        </button>
-        <button className={tab === 'exits' ? 'on' : ''} onClick={() => setTab('exits')}>
-          Exits ({state.resignations.length})
         </button>
       </div>
 
@@ -55,7 +66,7 @@ export const PeopleViews: React.FC = () => {
               <input
                 className="input"
                 type="search"
-                placeholder="Search employees by name, role or ID..."
+                placeholder="Search employees by name, number or email..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
@@ -65,8 +76,9 @@ export const PeopleViews: React.FC = () => {
               value={deptFilter}
               onChange={(e) => setDeptFilter(e.target.value)}
             >
-              {departments.map((d) => (
-                <option key={d} value={d}>{d === 'All' ? 'All Departments' : d}</option>
+              <option value="All">All Departments</option>
+              {deptList.map((d) => (
+                <option key={d.id} value={d.id}>{d.label}</option>
               ))}
             </select>
           </div>
@@ -76,46 +88,53 @@ export const PeopleViews: React.FC = () => {
               <thead>
                 <tr>
                   <th>Employee</th>
-                  <th>ID</th>
+                  <th>Number</th>
                   <th>Department</th>
-                  <th>Location</th>
-                  <th>Manager</th>
-                  <th>Grade</th>
+                  <th>Type</th>
                   <th>Status</th>
-                  <th>Actions</th>
+                  <th>Start date</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredEmployees.map((emp) => (
-                  <tr key={emp.id} className="click" onClick={() => openDrawer('empProfile', { emp })}>
-                    <td>
-                      <div className="who">
-                        <div className="av" style={{ background: avatarColor(emp.name) }}>
-                          {initials(emp.name)}
+                {filteredEmployees.map((emp) => {
+                  const name = `${emp.first_name} ${emp.last_name}`
+                  const dept = deptList.find((d) => d.id === emp.department_id)
+                  return (
+                    <tr
+                      key={emp.id}
+                      className="click"
+                      onClick={() => openDrawer('empProfile', { emp })}
+                    >
+                      <td>
+                        <div className="who">
+                          <div className="av" style={{ background: avatarColor(name) }}>
+                            {initials(name)}
+                          </div>
+                          <div>
+                            <b>{name}</b>
+                            <span>{emp.work_email}</span>
+                          </div>
                         </div>
-                        <div>
-                          <b>{emp.name}</b>
-                          <span>{emp.role}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td><span className="muted">{emp.id}</span></td>
-                    <td>{emp.dept}</td>
-                    <td>{emp.loc}</td>
-                    <td>{emp.mgr || '—'}</td>
-                    <td><span className="pill p-info">{emp.grade}</span></td>
-                    <td>
-                      <span className={`pill ${emp.status === 'Active' ? 'p-ok' : emp.status === 'Probation' ? 'p-warn' : 'p-bad'}`}>
-                        {emp.status}
-                      </span>
-                    </td>
-                    <td onClick={(e) => e.stopPropagation()}>
-                      <button className="btn sm ib" title="View details" onClick={() => openDrawer('empProfile', { emp })}>
-                        <Icon name="eye" size={15} />
-                      </button>
+                      </td>
+                      <td><span className="muted">{emp.employee_number}</span></td>
+                      <td>{dept?.label ?? 'Unassigned'}</td>
+                      <td style={{ textTransform: 'capitalize' }}>{emp.employment_type.replace('_', ' ')}</td>
+                      <td>
+                        <span className={`pill ${emp.status === 'active' ? 'p-ok' : emp.status === 'probation' ? 'p-warn' : 'p-bad'}`}>
+                          {emp.status.replace('_', ' ')}
+                        </span>
+                      </td>
+                      <td>{emp.start_date}</td>
+                    </tr>
+                  )
+                })}
+                {filteredEmployees.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="muted" style={{ textAlign: 'center', padding: 24 }}>
+                      {empList.length === 0 ? 'No employees yet — add one to get started.' : 'No matches.'}
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -124,120 +143,79 @@ export const PeopleViews: React.FC = () => {
 
       {tab === 'org' && (
         <div className="card mt">
-          <h3>Reporting Hierarchy</h3>
-          <p className="muted" style={{ marginBottom: '16px' }}>Interactive leadership tree down to individual contributors.</p>
-          <div className="org">
-            <div className="node" style={{ marginBottom: '12px' }}>
-              <div className="av" style={{ background: avatarColor('Naresh Vemparala') }}>NV</div>
-              <div>
-                <b>Naresh Vemparala</b>
-                <span>Founder & CEO · Executive Leadership</span>
-              </div>
-            </div>
-            <ul>
-              {state.depts.filter((d) => d.head !== 'Naresh Vemparala').map((d) => (
-                <li key={d.n}>
-                  <div className="node">
-                    <div className="av" style={{ background: avatarColor(d.head) }}>{initials(d.head)}</div>
-                    <div>
-                      <b>{d.head}</b>
-                      <span>Head of {d.n} · {d.cc}</span>
-                    </div>
-                  </div>
-                  <ul>
-                    {state.employees.filter((e) => e.mgr === d.head).map((sub) => (
-                      <li key={sub.id}>
-                        <div className="node">
-                          <div className="av" style={{ background: avatarColor(sub.name) }}>{initials(sub.name)}</div>
-                          <div>
-                            <b>{sub.name}</b>
-                            <span>{sub.role} ({sub.loc})</span>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </li>
-              ))}
-            </ul>
-          </div>
+          <h3>Department Hierarchy</h3>
+          <p className="muted" style={{ marginBottom: 16 }}>
+            Departments and their assigned employees from the live People API.
+          </p>
+          <OrgTree departments={deptList} employees={empList} />
         </div>
       )}
+    </div>
+  )
+}
 
-      {tab === 'onboard' && (
-        <div className="grid g2 mt">
-          {state.onboard.map((ob) => {
-            const emp = state.employees.find((e) => e.name === ob.emp)
-            const completedCount = ob.tasks.filter((t) => t[1] === 1).length
-            const pct = Math.round((completedCount / ob.tasks.length) * 100)
+function OrgTree({ departments, employees }: {
+  departments: ReferenceItem[]
+  employees: Employee[]
+}) {
+  const roots = departments.filter((d) => !d.parent_id)
+
+  if (departments.length === 0) {
+    return <p className="muted">No departments configured. Set them up in Organization Setup.</p>
+  }
+
+  return (
+    <div className="org">
+      {roots.map((dept) => (
+        <DeptNode key={dept.id} dept={dept} departments={departments} employees={employees} />
+      ))}
+    </div>
+  )
+}
+
+function DeptNode({ dept, departments, employees }: {
+  dept: ReferenceItem
+  departments: ReferenceItem[]
+  employees: Employee[]
+}) {
+  const children = departments.filter((d) => d.parent_id === dept.id)
+  const members = employees.filter((e) => e.department_id === dept.id)
+
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <div className="node">
+        <div className="av" style={{ background: avatarColor(dept.label) }}>
+          {initials(dept.label)}
+        </div>
+        <div>
+          <b>{dept.label}</b>
+          <span>{dept.code} · {members.length} member{members.length !== 1 ? 's' : ''}</span>
+        </div>
+      </div>
+      {(children.length > 0 || members.length > 0) && (
+        <ul>
+          {children.map((child) => (
+            <li key={child.id}>
+              <DeptNode dept={child} departments={departments} employees={employees} />
+            </li>
+          ))}
+          {members.map((emp) => {
+            const name = `${emp.first_name} ${emp.last_name}`
             return (
-              <div key={ob.emp} className="card">
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
-                  <div className="who">
-                    <div className="av" style={{ background: avatarColor(ob.emp) }}>{initials(ob.emp)}</div>
-                    <div>
-                      <b>{ob.emp}</b>
-                      <span>{emp?.role || 'New Hire'} · Joined {emp?.joined}</span>
-                    </div>
+              <li key={emp.id}>
+                <div className="node">
+                  <div className="av" style={{ background: avatarColor(name) }}>
+                    {initials(name)}
                   </div>
-                  <span className="pill p-info">{pct}% Ready</span>
+                  <div>
+                    <b>{name}</b>
+                    <span>{emp.employment_type.replace('_', ' ')} · {emp.status}</span>
+                  </div>
                 </div>
-                <div className="bar" style={{ marginBottom: '14px' }}>
-                  <span style={{ width: `${pct}%` }} />
-                </div>
-                <div className="list">
-                  {ob.tasks.map(([task, done], idx) => (
-                    <label key={idx} className={`check ${done ? 'done' : ''}`}>
-                      <input type="checkbox" defaultChecked={done === 1} disabled />
-                      <span>{task}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+              </li>
             )
           })}
-        </div>
-      )}
-
-      {tab === 'exits' && (
-        <div className="card mt">
-          <h3>Resignations & Offboarding Pipeline</h3>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Employee</th>
-                  <th>Notice Date</th>
-                  <th>Last Working Day</th>
-                  <th>Reason</th>
-                  <th>Exit Tasks</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.resignations.map((r) => {
-                  const checkList = r.check ?? []
-                  const doneTasks = checkList.filter((c) => c[1] === 1).length
-                  return (
-                    <tr key={r.id}>
-                      <td>
-                        <div className="who">
-                          <div className="av" style={{ background: avatarColor(r.emp) }}>{initials(r.emp)}</div>
-                          <div><b>{r.emp}</b><span>ID: {r.id}</span></div>
-                        </div>
-                      </td>
-                      <td>{r.date}</td>
-                      <td><b>{r.lwd}</b></td>
-                      <td>{r.reason}</td>
-                      <td>{doneTasks} of {checkList.length} tasks clear</td>
-                      <td><span className="pill p-warn">{r.status}</span></td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        </ul>
       )}
     </div>
   )

@@ -1,18 +1,25 @@
 import React, { useState } from 'react'
-import { usePeoplePlus } from '../people-plus-context'
+import { useRecords, useRecordCatalog } from '@/features/records/api'
+import { useAuth } from '@/auth/useAuth'
 import { Icon } from '../Icon'
-import { inr, avatarColor, initials } from '../helpers'
-import type { Candidate } from '../types'
 
 export const RecruitViews: React.FC = () => {
-  const { state, openModal, advanceCand, toast } = usePeoplePlus()
-  const [tab, setTab] = useState<'pipeline' | 'jobs' | 'interviews'>('pipeline')
+  const { can } = useAuth()
+  const allowed = can('people:manage') || can('users:manage')
+  const catalog = useRecordCatalog(allowed)
 
-  const stages: Candidate['s'][] = ['Applied', 'Screening', 'Interview', 'Offer', 'Hired']
+  const hasJobType = (catalog.data as { types?: { key: string }[] })
+    ?.types?.some((t) => t.key === 'job') ?? false
+  const hasCandType = (catalog.data as { types?: { key: string }[] })
+    ?.types?.some((t) => t.key === 'candidate') ?? false
 
-  const handleConvert = (candName: string) => {
-    toast(`Candidate ${candName} converted to employee! Onboarding checklist created.`)
-  }
+  const jobs = useRecords('job', allowed && hasJobType)
+  const candidates = useRecords('candidate', allowed && hasCandType)
+
+  const [tab, setTab] = useState<'pipeline' | 'jobs'>('pipeline')
+
+  const jobList = (jobs.data as { items?: any[] })?.items ?? []
+  const candList = (candidates.data as { items?: any[] })?.items ?? []
 
   return (
     <div className="view">
@@ -20,138 +27,113 @@ export const RecruitViews: React.FC = () => {
         <div>
           <div className="eyebrow">Recruitment & ATS</div>
           <h1>Recruit & Applicant Tracking</h1>
-          <p>AI-screened candidate pipeline, interview scheduling, and offer-to-hire conversions.</p>
-        </div>
-        <div className="actions">
-          <button className="btn" onClick={() => toast('Interview invite generated with calendar link')}>
-            <Icon name="calendar" size={16} /> Schedule interview
-          </button>
-          <button className="btn primary" onClick={() => openModal('postJob')}>
-            <Icon name="plus" size={16} /> Post a job
-          </button>
+          <p>Candidate pipeline, interview scheduling, and offer management.</p>
         </div>
       </div>
 
       <div className="tabs mb">
         <button className={tab === 'pipeline' ? 'on' : ''} onClick={() => setTab('pipeline')}>
-          ATS pipeline ({state.cands.length})
+          Pipeline ({candList.length})
         </button>
         <button className={tab === 'jobs' ? 'on' : ''} onClick={() => setTab('jobs')}>
-          Open positions ({state.jobs.length})
-        </button>
-        <button className={tab === 'interviews' ? 'on' : ''} onClick={() => setTab('interviews')}>
-          Interviews ({state.interviews.length})
+          Open positions ({jobList.length})
         </button>
       </div>
 
       {tab === 'pipeline' && (
-        <div className="card mt" style={{ overflow: 'hidden' }}>
-          <div className="kanban">
-            {stages.map((stage) => {
-              const candsInStage = state.cands.filter((c) => c.s === stage)
-              const nextStage = stages[stages.indexOf(stage) + 1]
-              return (
-                <div key={stage} className="col">
-                  <h4>
-                    {stage} <span>{candsInStage.length}</span>
-                  </h4>
-                  {candsInStage.map((cand) => {
-                    const job = state.jobs.find((j) => j.id === cand.job)
-                    return (
-                      <div key={cand.id} className="kc">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <b>{cand.n}</b>
-                          <span className="score" title="AI match score">{cand.sc}%</span>
-                        </div>
-                        <div className="role">{job?.t || 'Engineering Role'} · {cand.src}</div>
-                        <div className="ft">
-                          {nextStage ? (
-                            <button className="btn sm primary" onClick={() => advanceCand(cand.id, nextStage)}>
-                              Move to {nextStage}
-                            </button>
-                          ) : (
-                            <button className="btn sm ok" onClick={() => handleConvert(cand.n)}>
-                              Convert to Hire
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              )
-            })}
-          </div>
+        <div className="card mt">
+          {!hasCandType ? (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <Icon name="briefcase" size={32} />
+              <h3 style={{ marginTop: 12 }}>Candidate tracking not configured</h3>
+              <p className="muted" style={{ marginTop: 8 }}>
+                Create a "candidate" record type via the Records API to enable the ATS pipeline.
+                Candidates will appear here automatically once configured.
+              </p>
+            </div>
+          ) : candList.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <Icon name="users" size={32} />
+              <h3 style={{ marginTop: 12 }}>No candidates yet</h3>
+              <p className="muted" style={{ marginTop: 8 }}>
+                Add candidate records via the API to populate the pipeline.
+              </p>
+            </div>
+          ) : (
+            <>
+              <h3>Candidate Pipeline</h3>
+              <div className="table-wrap" style={{ marginTop: 14 }}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Candidate</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {candList.map((c: any) => (
+                      <tr key={c.id}>
+                        <td><b>{c.data?.name ?? c.id}</b></td>
+                        <td>
+                          <span className={`pill ${c.archived ? 'p-bad' : 'p-ok'}`}>
+                            {c.data?.stage ?? (c.archived ? 'Archived' : 'Active')}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
       )}
 
       {tab === 'jobs' && (
         <div className="card mt">
-          <h3>Active Job Postings</h3>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Job Title</th>
-                  <th>Department</th>
-                  <th>Location</th>
-                  <th>Type</th>
-                  <th>Referral Bonus</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.jobs.map((j) => (
-                  <tr key={j.id}>
-                    <td><b>{j.t}</b></td>
-                    <td>{j.dept}</td>
-                    <td>{j.loc}</td>
-                    <td>{j.type}</td>
-                    <td><span className="pill p-ok">{inr(j.bonus || 0)}</span></td>
-                    <td><span className="pill p-info">{j.status}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {tab === 'interviews' && (
-        <div className="card mt">
-          <h3>Scheduled Interview Rounds</h3>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Candidate</th>
-                  <th>Round</th>
-                  <th>Scheduled Time</th>
-                  <th>Interview Panel</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.interviews.map((iv) => {
-                  const cand = state.cands.find((c) => c.id === iv.cand)
-                  return (
-                    <tr key={iv.id}>
-                      <td>
-                        <div className="who">
-                          <div className="av" style={{ background: avatarColor(cand?.n || 'Candidate') }}>
-                            {initials(cand?.n || 'C')}
-                          </div>
-                          <b>{cand?.n || 'Candidate'}</b>
-                        </div>
-                      </td>
-                      <td><span className="pill p-info">{iv.round}</span></td>
-                      <td>{iv.when.replace('T', ' ')}</td>
-                      <td>{iv.panel}</td>
+          {!hasJobType ? (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <Icon name="briefcase" size={32} />
+              <h3 style={{ marginTop: 12 }}>Job postings not configured</h3>
+              <p className="muted" style={{ marginTop: 8 }}>
+                Create a "job" record type via the Records API to manage open positions.
+              </p>
+            </div>
+          ) : jobList.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <Icon name="briefcase" size={32} />
+              <h3 style={{ marginTop: 12 }}>No open positions</h3>
+              <p className="muted" style={{ marginTop: 8 }}>
+                Add job records via the API to list open positions.
+              </p>
+            </div>
+          ) : (
+            <>
+              <h3>Open Positions</h3>
+              <div className="table-wrap" style={{ marginTop: 14 }}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Position</th>
+                      <th>Status</th>
                     </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody>
+                    {jobList.map((j: any) => (
+                      <tr key={j.id}>
+                        <td><b>{j.data?.title ?? j.id}</b></td>
+                        <td>
+                          <span className={`pill ${j.archived ? 'p-bad' : 'p-ok'}`}>
+                            {j.archived ? 'Closed' : 'Open'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

@@ -11,7 +11,7 @@ const cell = 'px-4 py-3 text-left text-sm'
 
 export function EmployeesPage() {
   const { can } = useAuth()
-  const allowed = can('users:manage')
+  const allowed = can('people:manage') || can('users:manage')
   const employees = useEmployees(allowed)
   const departments = useReferences('departments', allowed)
   const grades = useReferences('grades', allowed)

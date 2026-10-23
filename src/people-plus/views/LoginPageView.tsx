@@ -4,24 +4,18 @@ import { Icon } from '../Icon'
 
 export const LoginPageView: React.FC = () => {
   const { login, theme, toggleTheme } = usePeoplePlus()
-  const [email, setEmail] = useState('ananya.rao@brightcone.ai')
-  const [password, setPassword] = useState('Admin@123')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
-    const success = login(email, password)
-    if (!success) {
-      setError('Invalid email or password. Please use one of the demo credentials below.')
-    }
-  }
-
-  const handleSelectDemo = (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail)
-    setPassword(demoPass)
-    setError(null)
-    login(demoEmail, demoPass)
+    setSubmitting(true)
+    const success = await login(email, password)
+    if (!success) setError('Unable to sign in. Check your credentials or contact your administrator.')
+    setSubmitting(false)
   }
 
   return (
@@ -109,40 +103,15 @@ export const LoginPageView: React.FC = () => {
               </div>
             )}
 
-            <button type="submit" className="btn primary" style={{ width: '100%', justifyContent: 'center', marginTop: '6px' }}>
-              Sign in to People Plus
+            <button disabled={submitting} type="submit" className="btn primary" style={{ width: '100%', justifyContent: 'center', marginTop: '6px' }}>
+              {submitting ? 'Signing in…' : 'Sign in to People Plus'}
             </button>
           </form>
 
           <div className="or">
-            <span>or sign in with demo accounts</span>
+            <span>Sign in with your work account</span>
           </div>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <button
-              type="button"
-              className="demo"
-              onClick={() => handleSelectDemo('ananya.rao@brightcone.ai', 'Admin@123')}
-            >
-              <div>
-                <b>Ananya Rao</b>
-                <span>People Ops Lead · HR Admin</span>
-              </div>
-              <span className="tag">HR Admin Access</span>
-            </button>
-
-            <button
-              type="button"
-              className="demo"
-              onClick={() => handleSelectDemo('rahul.varma@brightcone.ai', 'Welcome@123')}
-            >
-              <div>
-                <b>Rahul Varma</b>
-                <span>Backend Engineer · Employee</span>
-              </div>
-              <span className="tag">Employee Self-Service</span>
-            </button>
-          </div>
+          <p className="muted">Use the credentials issued by your Brightcone administrator.</p>
         </div>
       </section>
     </div>

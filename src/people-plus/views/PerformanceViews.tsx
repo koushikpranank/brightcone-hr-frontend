@@ -1,11 +1,39 @@
 import React, { useState } from 'react'
-import { usePeoplePlus } from '../people-plus-context'
+import { useEmployees, useReferences } from '@/features/people/api'
+import { useRecords, useRecordCatalog } from '@/features/records/api'
+import { useAuth } from '@/auth/useAuth'
 import { Icon } from '../Icon'
 import { avatarColor, initials } from '../helpers'
 
 export const PerformanceViews: React.FC = () => {
-  const { state, updateGoal, openModal, toast } = usePeoplePlus()
-  const [tab, setTab] = useState<'goals' | 'reviews' | 'feedback'>('goals')
+  const { can } = useAuth()
+  const allowed = can('people:manage') || can('users:manage')
+
+  const employees = useEmployees(allowed)
+  const departments = useReferences('departments', allowed)
+  const catalog = useRecordCatalog(allowed)
+
+  const hasGoalType = (catalog.data as { types?: { key: string }[] })
+    ?.types?.some((t) => t.key === 'goal') ?? false
+  const hasReviewType = (catalog.data as { types?: { key: string }[] })
+    ?.types?.some((t) => t.key === 'review') ?? false
+
+  const goals = useRecords('goal', allowed && hasGoalType)
+  const reviews = useRecords('review', allowed && hasReviewType)
+
+  const [tab, setTab] = useState<'goals' | 'reviews' | 'overview'>('overview')
+
+  const empList = employees.data ?? []
+  const deptList = departments.data ?? []
+  const goalList = (goals.data as { items?: unknown[] })?.items ?? []
+  const reviewList = (reviews.data as { items?: unknown[] })?.items ?? []
+
+  const activeCount = empList.filter((e) => e.status === 'active').length
+  const probationCount = empList.filter((e) => e.status === 'probation').length
+
+  if (employees.isLoading) {
+    return <div className="loader">Loading performance data…</div>
+  }
 
   return (
     <div className="view">
@@ -13,113 +41,187 @@ export const PerformanceViews: React.FC = () => {
         <div>
           <div className="eyebrow">Performance & Career</div>
           <h1>Performance Management</h1>
-          <p>Track quarterly OKRs, conduct 360-degree appraisals, and reward high performers.</p>
-        </div>
-        <div className="actions">
-          <button className="btn primary" onClick={() => openModal('addGoal')}>
-            <Icon name="plus" size={16} /> New goal / OKR
-          </button>
+          <p>Track goals, run appraisal cycles, and manage reviews — all from live API data.</p>
         </div>
       </div>
 
       <div className="tabs mb">
+        <button className={tab === 'overview' ? 'on' : ''} onClick={() => setTab('overview')}>
+          Overview
+        </button>
         <button className={tab === 'goals' ? 'on' : ''} onClick={() => setTab('goals')}>
-          Goals & OKRs ({state.goals.length})
+          Goals & OKRs ({goalList.length})
         </button>
         <button className={tab === 'reviews' ? 'on' : ''} onClick={() => setTab('reviews')}>
-          Appraisal cycle ({state.cycle.n})
-        </button>
-        <button className={tab === 'feedback' ? 'on' : ''} onClick={() => setTab('feedback')}>
-          360 feedback ({state.feedback.length})
+          Reviews ({reviewList.length})
         </button>
       </div>
 
-      {tab === 'goals' && (
-        <div className="grid g2 mt">
-          {state.goals.map((g) => (
-            <div key={g.id} className="card">
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                <span className="pill p-info">Due {g.due}</span>
-                <span style={{ fontWeight: 700, fontSize: '16px', color: 'var(--brand)' }}>{g.p}%</span>
-              </div>
-              <h3 style={{ marginBottom: '8px' }}>{g.t}</h3>
-              <p className="muted" style={{ fontSize: '13px', marginBottom: '14px' }}>Owner: {g.emp}</p>
-              <div className="bar" style={{ marginBottom: '16px' }}>
-                <span style={{ width: `${g.p}%` }} />
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <input
-                  type="range"
-                  min="0"
-                  max="100"
-                  value={g.p}
-                  style={{ flex: 1, accentColor: 'var(--brand)' }}
-                  onChange={(e) => updateGoal(g.id, Number(e.target.value))}
-                />
-                <button className="btn sm" onClick={() => toast(`Goal ${g.id} progress updated to ${g.p}%`)}>
-                  Save
-                </button>
-              </div>
+      {tab === 'overview' && (
+        <>
+          <div className="grid g4 mt">
+            <div className="card stat">
+              <div className="k"><i><Icon name="users" size={16} /></i> Active</div>
+              <div className="v">{activeCount}</div>
+              <div className="d">Eligible for review</div>
             </div>
-          ))}
+            <div className="card stat">
+              <div className="k"><i><Icon name="clock" size={16} /></i> On Probation</div>
+              <div className="v">{probationCount}</div>
+              <div className="d">Review at probation end</div>
+            </div>
+            <div className="card stat">
+              <div className="k"><i><Icon name="chart" size={16} /></i> Goals</div>
+              <div className="v">{goalList.length}</div>
+              <div className="d">{hasGoalType ? 'From records API' : 'Record type not configured'}</div>
+            </div>
+            <div className="card stat">
+              <div className="k"><i><Icon name="star" size={16} /></i> Reviews</div>
+              <div className="v">{reviewList.length}</div>
+              <div className="d">{hasReviewType ? 'From records API' : 'Record type not configured'}</div>
+            </div>
+          </div>
+
+          <div className="card mt">
+            <h3>Employees by Department</h3>
+            <p className="muted" style={{ marginBottom: 14 }}>
+              Performance review assignments by department.
+            </p>
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Department</th>
+                    <th>Headcount</th>
+                    <th>Active</th>
+                    <th>Probation</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {deptList.map((d) => {
+                    const members = empList.filter((e) => e.department_id === d.id)
+                    const active = members.filter((e) => e.status === 'active').length
+                    const prob = members.filter((e) => e.status === 'probation').length
+                    return (
+                      <tr key={d.id}>
+                        <td><b>{d.label}</b></td>
+                        <td>{members.length}</td>
+                        <td><span className="pill p-ok">{active}</span></td>
+                        <td>
+                          {prob > 0
+                            ? <span className="pill p-warn">{prob}</span>
+                            : <span className="muted">0</span>}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                  {deptList.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="muted" style={{ textAlign: 'center', padding: 24 }}>
+                        No departments configured yet.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+
+      {tab === 'goals' && (
+        <div className="card mt">
+          {!hasGoalType ? (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <Icon name="chart" size={32} />
+              <h3 style={{ marginTop: 12 }}>Goal tracking not configured</h3>
+              <p className="muted" style={{ marginTop: 8 }}>
+                Create a "goal" record type via the Records API to enable goal tracking.
+                Goals will appear here automatically once the record type is configured.
+              </p>
+            </div>
+          ) : (
+            <>
+              <h3>Goals & OKRs</h3>
+              <div className="table-wrap" style={{ marginTop: 14 }}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Goal</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {goalList.map((g: any) => (
+                      <tr key={g.id}>
+                        <td><b>{g.data?.title ?? g.id}</b></td>
+                        <td>
+                          <span className={`pill ${g.archived ? 'p-bad' : 'p-ok'}`}>
+                            {g.archived ? 'Archived' : 'Active'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    {goalList.length === 0 && (
+                      <tr>
+                        <td colSpan={2} className="muted" style={{ textAlign: 'center', padding: 24 }}>
+                          No goals created yet.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </>
+          )}
         </div>
       )}
 
       {tab === 'reviews' && (
         <div className="card mt">
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <div>
-              <h3>{state.cycle.n}</h3>
-              <span className="muted">Due deadline: {state.cycle.due} · Stage: Manager Evaluation</span>
+          {!hasReviewType ? (
+            <div style={{ textAlign: 'center', padding: 40 }}>
+              <Icon name="star" size={32} />
+              <h3 style={{ marginTop: 12 }}>Review cycles not configured</h3>
+              <p className="muted" style={{ marginTop: 8 }}>
+                Create a "review" record type via the Records API to enable appraisal tracking.
+                Review records will appear here once configured.
+              </p>
             </div>
-            <span className="pill p-warn">Active review window</span>
-          </div>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Employee</th>
-                  <th>Manager</th>
-                  <th>Self Review</th>
-                  <th>Manager Rating</th>
-                  <th>Status</th>
-                </tr>
-              </thead>
-              <tbody>
-                {state.employees.slice(0, 6).map((e) => (
-                  <tr key={e.id}>
-                    <td>
-                      <div className="who">
-                        <div className="av" style={{ background: avatarColor(e.name) }}>{initials(e.name)}</div>
-                        <b>{e.name}</b>
-                      </div>
-                    </td>
-                    <td>{e.mgr || 'Naresh Vemparala'}</td>
-                    <td><span className="pill p-ok">Submitted</span></td>
-                    <td><b>4.5 / 5.0</b></td>
-                    <td><span className="pill p-info">In review</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {tab === 'feedback' && (
-        <div className="grid g2 mt">
-          {state.feedback.map((f, i) => (
-            <div key={i} className="card">
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                <div className="av" style={{ background: avatarColor(f.from) }}>{initials(f.from)}</div>
-                <div>
-                  <b>{f.from}</b> <span className="muted">→ {f.to}</span>
-                  <div className="muted" style={{ fontSize: '12px' }}>{f.d}</div>
-                </div>
+          ) : (
+            <>
+              <h3>Appraisal Reviews</h3>
+              <div className="table-wrap" style={{ marginTop: 14 }}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Review</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reviewList.map((r: any) => (
+                      <tr key={r.id}>
+                        <td><b>{r.data?.title ?? r.id}</b></td>
+                        <td>
+                          <span className={`pill ${r.archived ? 'p-bad' : 'p-ok'}`}>
+                            {r.archived ? 'Complete' : 'In progress'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                    {reviewList.length === 0 && (
+                      <tr>
+                        <td colSpan={2} className="muted" style={{ textAlign: 'center', padding: 24 }}>
+                          No reviews created yet.
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
               </div>
-              <p style={{ lineHeight: 1.6, fontSize: '14px' }}>“{f.t}”</p>
-            </div>
-          ))}
+            </>
+          )}
         </div>
       )}
     </div>

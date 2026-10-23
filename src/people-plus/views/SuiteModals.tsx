@@ -1,93 +1,86 @@
 import React, { useState } from 'react'
 import { usePeoplePlus } from '../people-plus-context'
-import type { Employee } from '../types'
+import { useCreateEmployee, useReferences, useEmployees } from '@/features/people/api'
+import type { EmployeeInput } from '@/features/people/api'
+import { useAuth } from '@/auth/useAuth'
 
 export const SuiteModals: React.FC = () => {
-  const { modal, closeModal, applyLeave, claimExpense, raiseTicket, addEmployee, user, state, toast } = usePeoplePlus()
+  const { modal, closeModal, toast } = usePeoplePlus()
+  const { can } = useAuth()
+  const allowed = can('people:manage') || can('users:manage')
 
-  // Apply Leave form state
+  const departments = useReferences('departments', allowed)
+  const locations = useReferences('locations', allowed)
+  const employees = useEmployees(allowed)
+  const createEmployee = useCreateEmployee()
+
+  const deptList = departments.data ?? []
+  const locList = locations.data ?? []
+  const empList = employees.data ?? []
+
   const [leaveType, setLeaveType] = useState('Earned leave')
   const [leaveFrom, setLeaveFrom] = useState(new Date().toISOString().slice(0, 10))
   const [leaveTo, setLeaveTo] = useState(new Date().toISOString().slice(0, 10))
   const [leaveDays, setLeaveDays] = useState(1)
   const [leaveReason, setLeaveReason] = useState('')
 
-  // Claim Expense form state
   const [expCat, setExpCat] = useState('Internet')
   const [expAmt, setExpAmt] = useState(1500)
   const [expDate, setExpDate] = useState(new Date().toISOString().slice(0, 10))
   const [expDesc, setExpDesc] = useState('')
 
-  // Raise Ticket form state
   const [ticketSub, setTicketSub] = useState('')
   const [ticketCat, setTicketCat] = useState('Payroll & tax')
   const [ticketPri, setTicketPri] = useState<'Normal' | 'High'>('Normal')
 
-  // Add Employee form state
-  const [empName, setEmpName] = useState('')
-  const [empRole, setEmpRole] = useState('')
-  const [empDept, setEmpDept] = useState('Engineering')
-  const [empLoc, setEmpLoc] = useState('Hyderabad')
-  const [empCtc, setEmpCtc] = useState(2400000)
+  const [empFirst, setEmpFirst] = useState('')
+  const [empLast, setEmpLast] = useState('')
+  const [empEmail, setEmpEmail] = useState('')
+  const [empNumber, setEmpNumber] = useState('')
+  const [empDept, setEmpDept] = useState('')
+  const [empLoc, setEmpLoc] = useState('')
+  const [empType, setEmpType] = useState('full_time')
 
   if (!modal) return null
 
   const handleLeaveSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    applyLeave({
-      emp: user?.name || 'Rahul Varma',
-      type: leaveType,
-      from: leaveFrom,
-      to: leaveTo,
-      days: Number(leaveDays),
-      reason: leaveReason || 'Personal',
-    })
+    toast('Leave API is not yet available. Your request was not submitted.')
     closeModal()
   }
 
   const handleExpenseSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    claimExpense({
-      emp: user?.name || 'Rahul Varma',
-      cat: expCat,
-      amt: Number(expAmt),
-      date: expDate,
-      desc: expDesc || 'Expense claim',
-    })
+    toast('Expense API is not yet available. Your claim was not submitted.')
     closeModal()
   }
 
   const handleTicketSubmit = (e: React.FormEvent) => {
     e.preventDefault()
-    raiseTicket({
-      emp: user?.name || 'Rahul Varma',
-      sub: ticketSub || 'Helpdesk request',
-      cat: ticketCat,
-      pri: ticketPri,
-      to: '',
-    })
+    toast('Helpdesk API is not yet available. Your ticket was not created.')
     closeModal()
   }
 
-  const handleAddEmpSubmit = (e: React.FormEvent) => {
+  const handleAddEmpSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    const nextId = 'BC-' + Math.floor(1080 + Math.random() * 900)
-    const newEmp: Employee = {
-      id: nextId,
-      name: empName,
-      role: empRole,
-      dept: empDept,
-      loc: empLoc,
-      status: 'Probation',
-      joined: new Date().toISOString().slice(0, 10),
-      mgr: 'Priya Menon',
-      ctc: Number(empCtc),
-      phone: '+91 98480 99999',
-      shift: 'General',
-      grade: 'L4',
+    const input: EmployeeInput = {
+      first_name: empFirst,
+      last_name: empLast,
+      work_email: empEmail,
+      employee_number: empNumber || `BC-${Date.now().toString(36).toUpperCase()}`,
+      employment_type: empType,
+      status: 'probation',
+      start_date: new Date().toISOString().slice(0, 10),
+      department_id: empDept || null,
+      location_id: empLoc || null,
     }
-    addEmployee(newEmp)
-    closeModal()
+    try {
+      await createEmployee.mutateAsync(input)
+      toast(`Employee ${empFirst} ${empLast} added successfully.`)
+      closeModal()
+    } catch (err) {
+      toast(`Failed to add employee: ${(err as Error).message}`)
+    }
   }
 
   return (
@@ -102,9 +95,10 @@ export const SuiteModals: React.FC = () => {
             <div className="field">
               <span>Leave Type</span>
               <select className="input" value={leaveType} onChange={(e) => setLeaveType(e.target.value)}>
-                {state.leaveTypes.map((t) => (
-                  <option key={t.n} value={t.n}>{t.n} ({t.q} days annual quota)</option>
-                ))}
+                <option value="Earned leave">Earned leave</option>
+                <option value="Casual leave">Casual leave</option>
+                <option value="Sick leave">Sick leave</option>
+                <option value="Comp off">Compensatory off</option>
               </select>
             </div>
 
@@ -139,7 +133,7 @@ export const SuiteModals: React.FC = () => {
         {modal.type === 'claimExpense' && (
           <form onSubmit={handleExpenseSubmit}>
             <h2>Claim Expense Reimbursement</h2>
-            <p className="sub">Submit business expenses and attaching invoice details.</p>
+            <p className="sub">Submit business expenses with invoice details.</p>
 
             <div className="field">
               <span>Category</span>
@@ -214,42 +208,56 @@ export const SuiteModals: React.FC = () => {
         {modal.type === 'addEmp' && (
           <form onSubmit={handleAddEmpSubmit}>
             <h2>Add New Employee</h2>
-            <p className="sub">Create a new employee profile in Brightcone master data.</p>
+            <p className="sub">Create a new employee profile via the People API.</p>
 
             <div className="frow">
               <div className="field">
-                <span>Full Name</span>
-                <input className="input" placeholder="e.g. Sravan Kumar" value={empName} onChange={(e) => setEmpName(e.target.value)} required />
+                <span>First Name</span>
+                <input className="input" placeholder="e.g. Sravan" value={empFirst} onChange={(e) => setEmpFirst(e.target.value)} required />
               </div>
               <div className="field">
-                <span>Job Role</span>
-                <input className="input" placeholder="e.g. Frontend Engineer" value={empRole} onChange={(e) => setEmpRole(e.target.value)} required />
+                <span>Last Name</span>
+                <input className="input" placeholder="e.g. Kumar" value={empLast} onChange={(e) => setEmpLast(e.target.value)} required />
               </div>
+            </div>
+
+            <div className="field">
+              <span>Work Email</span>
+              <input className="input" type="email" placeholder="e.g. sravan.kumar@brightcone.ai" value={empEmail} onChange={(e) => setEmpEmail(e.target.value)} required />
             </div>
 
             <div className="frow">
               <div className="field">
                 <span>Department</span>
                 <select className="input" value={empDept} onChange={(e) => setEmpDept(e.target.value)}>
-                  {state.depts.map((d) => <option key={d.n} value={d.n}>{d.n}</option>)}
+                  <option value="">Select department</option>
+                  {deptList.map((d) => <option key={d.id} value={d.id}>{d.label}</option>)}
                 </select>
               </div>
               <div className="field">
                 <span>Location</span>
                 <select className="input" value={empLoc} onChange={(e) => setEmpLoc(e.target.value)}>
-                  {state.locations.map((loc) => <option key={loc} value={loc}>{loc}</option>)}
+                  <option value="">Select location</option>
+                  {locList.map((l) => <option key={l.id} value={l.id}>{l.label}</option>)}
                 </select>
               </div>
             </div>
 
             <div className="field">
-              <span>Annual CTC (INR)</span>
-              <input className="input" type="number" min="300000" step="50000" value={empCtc} onChange={(e) => setEmpCtc(Number(e.target.value))} required />
+              <span>Employment Type</span>
+              <select className="input" value={empType} onChange={(e) => setEmpType(e.target.value)}>
+                <option value="full_time">Full time</option>
+                <option value="part_time">Part time</option>
+                <option value="contract">Contract</option>
+                <option value="intern">Intern</option>
+              </select>
             </div>
 
             <div className="mfoot">
               <button type="button" className="btn" onClick={closeModal}>Cancel</button>
-              <button type="submit" className="btn primary">Add to Directory</button>
+              <button type="submit" className="btn primary" disabled={createEmployee.isPending}>
+                {createEmployee.isPending ? 'Adding…' : 'Add Employee'}
+              </button>
             </div>
           </form>
         )}
@@ -265,14 +273,15 @@ export const SuiteModals: React.FC = () => {
             <div className="field">
               <span>Teammate to Swap With</span>
               <select className="input">
-                {state.employees.map((e) => (
-                  <option key={e.id} value={e.name}>{e.name} ({e.shift})</option>
+                {empList.map((e) => (
+                  <option key={e.id} value={e.id}>{e.first_name} {e.last_name}</option>
                 ))}
+                {empList.length === 0 && <option disabled>No employees loaded</option>}
               </select>
             </div>
             <div className="mfoot">
               <button className="btn" onClick={closeModal}>Cancel</button>
-              <button className="btn primary" onClick={() => { closeModal(); toast('Shift swap request sent!') }}>Send Request</button>
+              <button className="btn primary" onClick={() => { closeModal(); toast('Shift swap API is not yet available.') }}>Send Request</button>
             </div>
           </div>
         )}
